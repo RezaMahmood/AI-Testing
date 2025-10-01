@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "e2e-testing/1.0.0": {
+        "runtime": {
+          "e2e-testing.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "e2e-testing/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
