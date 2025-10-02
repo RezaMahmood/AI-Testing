@@ -1,2 +1,6 @@
 pytest
-semantic-kernel
+semantic-kernel>=1.0.0
+aiohttp>=3.9.0
+asyncio
+json-rpc>=1.15.0
+typing-extensions>=4.8.0
