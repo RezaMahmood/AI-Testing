@@ -2,7 +2,6 @@ import asyncio
 import subprocess
 import json
 from typing import Any, Dict, List, Optional
-from mcp_dataclasses import MCPToolDefinition, MCPCapabilityType
 
 
 class ChromeDevToolsClient:
@@ -24,10 +23,11 @@ class ChromeDevToolsClient:
         
         self.process = await asyncio.create_subprocess_exec(
             "npx", "chrome-devtools-mcp@latest",
+            "headless", "true",
+            "isolated", "true", "y",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            text=True
+            stderr=asyncio.subprocess.PIPE
         )
         
         self.stdin_writer = self.process.stdin
@@ -79,7 +79,7 @@ class ChromeDevToolsClient:
         
         # Send request
         request_json = json.dumps(request) + "\n"
-        self.stdin_writer.write(request_json)
+        self.stdin_writer.write(request_json.encode('utf-8'))
         await self.stdin_writer.drain()
         
         # Wait for response
@@ -99,14 +99,14 @@ class ChromeDevToolsClient:
             notification["params"] = params
         
         notification_json = json.dumps(notification) + "\n"
-        self.stdin_writer.write(notification_json)
+        self.stdin_writer.write(notification_json.encode('utf-8'))
         await self.stdin_writer.drain()
 
     async def _read_responses(self):
         """Background task to read JSON-RPC responses"""
         try:
             async for line in self.stdout_reader:
-                line = line.strip()
+                line = line.decode('utf-8').strip()
                 if not line:
                     continue
                 
