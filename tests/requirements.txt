@@ -4,3 +4,5 @@ aiohttp>=3.9.0
 asyncio
 json-rpc>=1.15.0
 typing-extensions>=4.8.0
+python-dotenv>=1.0.0
+pytest-asyncio
