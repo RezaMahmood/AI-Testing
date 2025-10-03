@@ -9,11 +9,13 @@ import subprocess
 import os
 
 
+
 def run_tests():
     """Run pytest and return the exit code."""
     # Change to the tests directory
     tests_dir = '/workspaces/e2e-testing/tests'
     os.chdir(tests_dir)
+
     
     try:
         # Activate virtual environment and run pytest

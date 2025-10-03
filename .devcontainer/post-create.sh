@@ -39,6 +39,9 @@ fi
 source venv/bin/activate
 pip install -r tests/requirements.txt
 
-
+echo "Installing Node and Chrome Dev Tools"
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+apt-get install nsolid -y
+npx chrome-devtools-mcp@latest --help
 
 echo "✅ Post-create setup completed successfully!"

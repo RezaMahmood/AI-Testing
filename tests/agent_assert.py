@@ -1,45 +1,94 @@
-
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from typing import Optional, Dict, Any
+import os
+from dotenv import load_dotenv
 from assertion_result import AssertionResult
+from mcp_dataclasses import IMCPClient
+from mcp_chromedevtools_client import ChromeDevToolsClient
+
+# Load environment variables from .env file
+load_dotenv()
 
 class AgentAssert:
-    def __init__(self, api_key: str, model: str = "gpt-4"):
-        self.api_key = api_key
-        self.model = model
+    def __init__(self, 
+                 api_key: str = None, 
+                 mcp_client: Optional[IMCPClient] = None,
+                 azure_endpoint: str = None,
+                 deployment_name: str = None):
+        # Azure OpenAI configuration (required)
+        self.api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
+        self.azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+        self.deployment_name = deployment_name or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+        
         self.kernel = None
-        self.chrome_plugin = None
-        self.mcp_client = None
+        self.mcp_client = mcp_client  # Accept specific client
         self.available_tools = {}
+        
+        # Validation
+        if not self.api_key:
+            raise ValueError("Azure OpenAI API key required")
+        
+        if not self.azure_endpoint:
+            raise ValueError("Azure OpenAI endpoint required")
+        
+        if not self.deployment_name:
+            raise ValueError("Azure OpenAI deployment name required")
     
     async def setup_kernel(self):
-        """Initialize the Semantic Kernel with auto-discovered Chrome DevTools functions"""
+        """Initialize SK with Azure OpenAI and MCP client"""
         # Create kernel
         self.kernel = sk.Kernel()
         
-        # Add OpenAI chat completion service
-        service_id = "chat-gpt"
-        self.kernel.add_service(OpenAIChatCompletion(
+        # Add Azure OpenAI service
+        service_id = "azure-openai"
+        self.kernel.add_service(AzureChatCompletion(
             service_id=service_id,
             api_key=self.api_key,
-            ai_model_id=self.model
+            endpoint=self.azure_endpoint,
+            deployment_name=self.deployment_name,
+            api_version="2024-02-01"
         ))
         
-        # Setup Chrome DevTools MCP client
-        self.mcp_client = ChromeDevToolsMCPClient()
-        await self.mcp_client.__aenter__()
+        # Use provided client or create default Chrome DevTools client
+        if self.mcp_client is None:
+            self.mcp_client = ChromeDevToolsClient()
         
-        # Create dynamic plugin with auto-discovery
-        self.chrome_plugin = DynamicChromeDevToolsPlugin(self.mcp_client)
-        await self.chrome_plugin.initialize_and_discover()
-        
-        # Add all discovered functions to the kernel
-        for func_name, kernel_func in self.chrome_plugin.get_all_functions().items():
+        # Initialize client and discover capabilities
+        async with self.mcp_client:
+            capabilities = await self.mcp_client.discover_capabilities()
+            self.available_tools = capabilities.get("tools", {})
+            
+            # Add tools to kernel
+            await self._register_mcp_tools()
+    
+    async def _register_mcp_tools(self):
+        """Register discovered MCP tools with Semantic Kernel"""
+        for tool_name, tool_info in self.available_tools.items():
+            # Create kernel function for each tool
+            kernel_func = self._create_kernel_function(tool_name, tool_info)
             self.kernel.add_function(
-                plugin_name="ChromeDevTools",
+                plugin_name=f"{self.mcp_client.server_name}_tools",
                 function=kernel_func
             )
+    
+    def _create_kernel_function(self, tool_name: str, tool_info: Dict[str, Any]):
+        """Create SK function from MCP tool definition"""
+        async def dynamic_tool_function(**kwargs) -> str:
+            try:
+                result = await self.mcp_client.call_tool(tool_name, kwargs)
+                return f"Tool '{tool_name}' executed: {result}"
+            except Exception as e:
+                return f"Error executing '{tool_name}': {str(e)}"
         
-        # Store available tools for prompt generation
-        self.available_tools = self.mcp_client.available_tools
+        # Set metadata
+        dynamic_tool_function.__name__ = tool_name
+        dynamic_tool_function.__doc__ = tool_info.get("description", "")
+        
+        return sk.KernelFunction.from_method(
+            method=dynamic_tool_function,
+            plugin_name=f"{self.mcp_client.server_name}_tools"
+        )
     
     def _generate_tools_description(self) -> str:
         """Generate a description of all available tools for AI prompts"""
@@ -71,12 +120,12 @@ class AgentAssert:
         return "\n\n".join(descriptions)
     
     async def assert_case(self, url: str, test_steps: str, expected_result: str) -> AssertionResult:
-        """Execute test case using auto-discovered Chrome DevTools functions"""
+        """Execute test case using the configured MCP client"""
         try:
             if not self.kernel:
                 await self.setup_kernel()
             
-            # Generate dynamic tools description
+            # Generate client-specific tools description
             tools_description = self._generate_tools_description()
             
             # Create AI prompt with discovered tools
