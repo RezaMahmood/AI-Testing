@@ -33,7 +33,6 @@ fi
 echo "Installing Python packages from requirements.txt..."
 source venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
 
 echo "Installing Node and Chrome Dev Tools"
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
