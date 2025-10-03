@@ -7,7 +7,7 @@ set -e  # Exit on any error
 echo "Setting up Python test environment..."
 
 # Navigate to tests directory
-cd /workspaces/e2e-testing/tests
+# cd /workspaces/e2e-testing/tests
 
 # Check if virtual environment exists, create if not
 if [ ! -d "venv" ]; then
