@@ -33,10 +33,10 @@ class MCPAgentAssert:
         
         # Create and enter the MCP plugin context
         self.chrome_plugin = MCPStdioPlugin(
-            name="chrome-devtools",
+            name="chrome_devtools",
             description="Plugin to interact with Chrome DevTools via MCP",
             command="npx",
-            args=["chrome-devtools-mcp@latest", "--headless", "true", "--isolated", "true", "-y"]
+            args=["chrome-devtools-mcp@latest", "--isolated", "true", "--headless", "true", "-y"]
         )
         
         try:
