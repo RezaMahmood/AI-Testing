@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 from agent_assert import AgentAssert
+from agent_assert_mcp import MCPAgentAssert
 from assertion_result import AssertionResult
 
 
@@ -10,21 +11,19 @@ class TestAgentAssert:
     @pytest.mark.asyncio
     async def test_agent_assert_case(self):
         """Test the agent_assert functionality with a sample test case"""
-        
-        # Initialize the AgentAssert instance
-        agent = AgentAssert()
-        
+
         # Placeholder values for the test case
         test_url = "https://developer.chrome.com"
         test_message = "Navigate using the button called 'Explore Now' in the section on 'What''s new in Chrome'"
         expected_result = "Page should load with status 200 and display the main heading"
-        
-        # Execute the test case
-        result = await agent.assert_case(
-            url=test_url,
-            testmessage=test_message,
-            expectedresult=expected_result
-        )
+        # Initialize the MCPAgentAssert instance
+        async with MCPAgentAssert() as agent:
+            # Execute the test case
+            result = await agent.assert_case(
+                url=test_url,
+                testmessage=test_message,
+                expectedresult=expected_result
+            )
         
         # Verify that we get an AssertionResult instance
         assert isinstance(result, AssertionResult), "Result should be an AssertionResult instance"
