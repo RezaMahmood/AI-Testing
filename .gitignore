@@ -270,4 +270,122 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Additional System and OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Package files
+*.deb
+*.rpm
+*.dmg
+*.pkg
+*.msi
+*.exe
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# IDE and Editor Files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/c_cpp_properties.json
+.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.metadata
+.classpath
+.settings/
+*.sublime-*
+.atom/
+
+# Security and Sensitive Files
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cert
+*.der
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.envrc
+secrets.json
+appsettings.Production.json
+*.secret
+*secret*
+*password*
+*credentials*
+.credentials
+config.json
+.config
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.nyc_output
+
+# Logs and databases
+*.log  
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*~
+.#*
+#*#
+
+# Test coverage and reports
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
 tests/venv/
