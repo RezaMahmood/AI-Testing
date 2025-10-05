@@ -48,22 +48,16 @@ jobs:
       run: |
         source venv/bin/activate
         if [ -n "${{ inputs.test_filter }}" ]; then
-          pytest --tb=short --verbose --junitxml=test-results.xml -k "${{ inputs.test_filter }}"
+          pytest --tb=short --verbose --junitxml=pytest-results.xml -k "${{ inputs.test_filter }}"
         else
-          pytest --tb=short --verbose --junitxml=test-results.xml
+          pytest --tb=short --verbose --junitxml=pytest-results.xml
         fi
     
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
+    - name: Publish pytest results
+      uses: pmeier/pytest-results-action@main
       if: always()
       with:
-        name: test-results
-        path: test-results.xml
-    
-    - name: Publish test results
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always()
-      with:
-        files: test-results.xml
-        report_individual_runs: true
-        deduplicate_classes_by_file_name: false
+        path: pytest-results.xml
+        summary: true
+        display-options: fEX
+        fail-on-empty: true
