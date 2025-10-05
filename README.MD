@@ -1,6 +1,6 @@
 # AI Testing Framework
 
-A Python-based testing framework that uses AI agents to perform automated web testing through Chrome DevTools integration via Model Context Protocol (MCP).
+A Python-based testing framework that uses AI to perform automated web testing through Chrome DevTools integration via Model Context Protocol (MCP).
 
 ## Overview
 
