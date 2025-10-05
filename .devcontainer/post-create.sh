@@ -1,26 +1,12 @@
 #!/bin/bash
 
-# Post-create script for dev container
+# Post-create script for Python dev container
 # This script runs after the dev container has been created and started
 
-echo "🚀 Running post-create setup script..."
+echo "🚀 Running Python-focused post-create setup script..."
 
-apt-get update
-
-# Install Python 3.11 and related packages
-echo "Installing Python 3.11..."
-if ! command -v python3 >/dev/null 2>&1; then
-    sudo apt-get install -y python3.11
-fi
-
-if ! python3 -c "import venv" >/dev/null 2>&1; then
-    sudo apt-get install -y python3.11-venv
-fi
-
-# Install pip if not available
-if ! command -v pip >/dev/null 2>&1; then
-    sudo apt-get install -y python3-pip
-fi
+# Update package lists
+sudo apt-get update
 
 # Create virtual environment and install Python packages
 echo "Setting up Python virtual environment and installing packages..."
@@ -34,12 +20,19 @@ echo "Installing Python packages from requirements.txt..."
 source venv/bin/activate
 pip install --upgrade pip
 
-echo "Installing Node and Chrome Dev Tools"
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-apt-get install nsolid -y
-npm install chrome-devtools-mcp@latest -y
+# Install Python requirements if they exist
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+    echo "✅ Python packages installed from requirements.txt"
+else
+    echo "⚠️ No requirements.txt found, skipping Python package installation"
+fi
+
+echo "Installing Chrome Dev Tools MCP..."
+npm install chrome-devtools-mcp@latest
 
 echo "✅ Post-create setup completed successfully!"
-echo "📦 Installed: Python 3.11, pip packages, Node.js, and Chrome DevTools MCP"
+echo "📦 Installed: Python packages, Node.js 20, and Chrome DevTools MCP"
 echo "🐍 Python virtual environment created at: ./venv"
 echo "💡 To activate the virtual environment manually: source venv/bin/activate"
+echo "🧪 To run tests: pytest --tb=short --verbose"
