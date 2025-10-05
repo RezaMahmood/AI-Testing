@@ -1,13 +1,12 @@
 import pytest
 import asyncio
-from agent_assert import AgentAssert
 from agent_assert_mcp import MCPAgentAssert
 from assertion_result import AssertionResult
 
 
 class TestAgentAssert:
     """Test class for AgentAssert functionality"""
-    
+
     @pytest.mark.asyncio
     async def test_agent_assert_case(self):
         """Test the agent_assert functionality with a sample test case"""
@@ -20,15 +19,10 @@ class TestAgentAssert:
         async with MCPAgentAssert() as agent:
             # Execute the test case
             result = await agent.assert_case(
-                url=test_url,
-                testmessage=test_message,
-                expectedresult=expected_result
+                url=test_url, testmessage=test_message, expectedresult=expected_result
             )
-        
-        assert result.TestPassed == True, f"Web test failed: {result.Message}"
-        
-       
 
+        assert result.TestPassed == True, f"Web test failed: {result.Message}"
 
 
 if __name__ == "__main__":
