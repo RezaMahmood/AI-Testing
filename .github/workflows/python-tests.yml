@@ -1,10 +1,13 @@
 name: Python Tests
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: 'Test filter pattern (optional)'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   test:
@@ -18,28 +21,51 @@ jobs:
       with:
         python-version: '3.11'
     
+    - name: Update package lists
+      run: sudo apt-get update
+    
+    - name: Install Python venv package
+      run: sudo apt-get install -y python3.11-venv
+    
+    - name: Install Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Install Chrome DevTools MCP
+      run: npm install chrome-devtools-mcp@latest
+    
     - name: Create virtual environment
       run: |
-        cd tests
-        python -m venv venv
+        python3 -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
     
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
-        cd tests
         source venv/bin/activate
         pip install -r requirements.txt
     
     - name: Run tests
       run: |
-        cd tests
         source venv/bin/activate
-        pytest --tb=short --verbose --junitxml=test-results.xml
+        if [ -n "${{ inputs.test_filter }}" ]; then
+          pytest --tb=short --verbose --junitxml=test-results.xml -k "${{ inputs.test_filter }}"
+        else
+          pytest --tb=short --verbose --junitxml=test-results.xml
+        fi
     
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
-        path: tests/test-results.xml
+        path: test-results.xml
+    
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: test-results.xml
+        report_individual_runs: true
+        deduplicate_classes_by_file_name: false
