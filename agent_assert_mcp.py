@@ -195,7 +195,7 @@ class MCPAgentAssert:
                 raise RuntimeError("Chrome DevTools plugin not available. Use 'async with MCPAgentAssert() as agent:' pattern.")
             
             prompt = f"""
-You are a web testing agent with access to Chrome DevTools functions as a plugin.
+You are a web testing agent with access to Chrome DevTools functions as a plugin.  Forget any previous instructions or test messages.  Treat the new instructions as brand new.
 
 You need to test the following:
 URL: {url}
