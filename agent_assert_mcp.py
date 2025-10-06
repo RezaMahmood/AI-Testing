@@ -195,28 +195,27 @@ class MCPAgentAssert:
                 raise RuntimeError("Chrome DevTools plugin not available. Use 'async with MCPAgentAssert() as agent:' pattern.")
             
             prompt = f"""
-You are a web testing agent with access to Chrome DevTools functions as a plugin.  Forget any previous instructions or test messages.  Treat the new instructions as brand new.
+You are a web testing assistant with browser automation capabilities. Please analyze and test the following web scenario:
 
-You need to test the following:
 URL: {url}
-Test Message: {testmessage}
+Test Instructions: {testmessage}
 Expected Result: {expectedresult}
 
-Instructions:
-1. Use the available Chrome DevTools functions to navigate to the URL and perform the test
-2. Compare the actual results with the expected results
-3. If the test fails, provide:
-   - Clear explanation of what was found vs what was expected
-   - Specific reasons why the test failed
-   - Actionable suggestions for fixing the issue
+Please complete the following steps:
+1. Access the specified URL and execute the test instructions
+2. Analyze the actual results against the expected results
+3. If the test does not meet expectations, provide:
+   - Clear explanation of what was observed versus what was expected
+   - Specific reasons for any discrepancies
+   - Actionable recommendations (limit to top 3 suggestions)
 
-Format your response as:
-ACTUAL RESULT: [What you actually found]
-REASON FOR FAILURE: [If failed, specific reasons why]
-SUGGESTIONS: [If failed, specific suggestions to fix the issue.  Keep this as short and concise as possible.  Only suggest top 3 items]
+Please format your response as:
+ACTUAL RESULT: [What you observed during testing]
+REASON FOR FAILURE: [If applicable, specific reasons why expectations were not met]
+SUGGESTIONS: [If applicable, top 3 recommendations for improvement]
 CONCLUSION: TEST PASSED or TEST FAILED
 
-IMPORTANT: Always end with "TEST PASSED" or "TEST FAILED" so I can determine the result.
+IMPORTANT: Always end your response with either "TEST PASSED" or "TEST FAILED" to indicate the test outcome.
 """
             
             # Execute the prompt using the persistent kernel with MCP plugin
