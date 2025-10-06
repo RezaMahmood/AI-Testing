@@ -12,9 +12,9 @@ class TestAgentAssert:
         """Test the agent_assert functionality with a sample test case"""
 
         # Placeholder values for the test case
-        test_url = "https://developer.chrome.com"
-        test_message = "Navigate using the button called 'Explore Now' in the section on 'What''s new in Chrome'"
-        expected_result = "Page should load with status 200.  The page should take less than 2 seconds to load"
+        test_url = "https://github.com/RezaMahmood/AI-Testing"
+        test_message = "Navigate to the file called assertion_result.py."
+        expected_result = "Page should load with status 200.  The page should take less than 3 seconds to load"
         # Initialize the MCPAgentAssert instance
         async with MCPAgentAssert() as agent:
             # Execute the test case
