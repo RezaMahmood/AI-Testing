@@ -63,6 +63,27 @@ class TestAgentAssert:
         
         assert result.TestPassed == True, f"Web test failed: {result.Message}"
 
+    @pytest.mark.asyncio
+    async def test_single_case_cache(self):
+        """Test with a default single test case using cache - for pytest discovery"""
+        
+        test_case = TestCase(
+            url="https://github.com/RezaMahmood/AI-Testing",
+            instructions="Navigate to the file called assertion_result.py.",
+            expected_result="Page should load with status 200. The page should take less than 3 seconds to load"
+        )
+        
+        async with MCPAgentAssert() as agent:
+            result = await agent.assert_case_cache(
+                url=test_case.url,
+                testmessage=test_case.instructions,
+                expectedresult=test_case.expected_result
+            )
+        
+        print(result.Message)
+        assert result.TestPassed == True, f"Web test failed: {result.Message}"
+        
+
     def parse_csv_file(self, csv_file_path: str) -> List[TestCase]:
         """
         Parse a CSV file and return a list of TestCase objects

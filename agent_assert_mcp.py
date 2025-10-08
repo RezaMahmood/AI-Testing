@@ -236,3 +236,58 @@ IMPORTANT: Always end your response with either "TEST PASSED" or "TEST FAILED" t
                 Message=f"Error in assert_case: {str(ex)}"
             )
         # Note: No finally block needed - cleanup handled by __aexit__
+    
+    async def assert_case_cache(self, url: str, testmessage: str, expectedresult: str) -> AssertionResult:
+        """Execute test case using Chrome DevTools and AI reasoning"""
+        try:
+            # Verify kernel is setup (should be done in __aenter__)
+            if not self.kernel:
+                raise RuntimeError("Kernel not initialized. Use 'async with MCPAgentAssert() as agent:' pattern.")
+            
+            if not self.chrome_plugin:
+                raise RuntimeError("Chrome DevTools plugin not available. Use 'async with MCPAgentAssert() as agent:' pattern.")
+            
+            prompt = f"""
+You are a web testing assistant with browser automation capabilities using Chrome DevTools MCP. Please analyze and test the following web scenario:
+
+URL: {url}
+Test Instructions: {testmessage}
+Expected Result: {expectedresult}
+
+Please complete the following steps:
+1. Access the specified URL and execute the test instructions
+2 Create a Selenium script to reproduce the test steps and results
+3. Analyze the actual results against the expected results
+4. If the test does not meet expectations, provide:
+   - Clear explanation of what was observed versus what was expected
+   - Specific reasons for any discrepancies
+   - Actionable recommendations (limit to top 3 suggestions)
+
+Please format your response as:
+ACTUAL RESULT: [What you observed during testing]
+REASON FOR FAILURE: [If applicable, specific reasons why expectations were not met]
+SUGGESTIONS: [If applicable, top 3 recommendations for improvement]
+CACHE: Include the Selenium script in the response message
+CONCLUSION: TEST PASSED or TEST FAILED
+
+IMPORTANT: Always end your response with either "TEST PASSED" or "TEST FAILED" to indicate the test outcome.
+"""
+            
+            # Execute the prompt using the persistent kernel with MCP plugin
+            result = await self.kernel.invoke_prompt(prompt)
+            result_text = str(result)
+            
+            # Analyze the result to determine if test passed or failed
+            test_passed = "TEST PASSED" in result_text.upper()
+            
+            return AssertionResult(
+                TestPassed=test_passed,
+                Message=result_text
+            )
+            
+        except Exception as ex:
+            return AssertionResult(
+                TestPassed=False,
+                Message=f"Error in assert_case: {str(ex)}"
+            )
+        # Note: No finally block needed - cleanup handled by __aexit__
