@@ -1,0 +1,83 @@
+# Template for Python test execution
+# File: .azuredevops/templates/python-test-template.yml
+
+parameters:
+- name: pythonVersion
+  type: string
+  default: '3.11'
+- name: testFilter
+  type: string
+  default: ''
+- name: enableCoverage
+  type: boolean
+  default: true
+
+steps:
+- task: UsePythonVersion@0
+  displayName: 'Use Python ${{ parameters.pythonVersion }}'
+  inputs:
+    versionSpec: '${{ parameters.pythonVersion }}'
+    addToPath: true
+
+- task: NodeTool@0
+  displayName: 'Install Node.js'
+  inputs:
+    versionSpec: '20.x'
+
+- task: Cache@2
+  displayName: 'Cache Python packages'
+  inputs:
+    key: 'python | "$(Agent.OS)" | requirements.txt'
+    restoreKeys: |
+      python | "$(Agent.OS)"
+    path: $(Pipeline.Workspace)/.pip
+
+- script: |
+    npm install chrome-devtools-mcp@latest
+  displayName: 'Install Chrome DevTools MCP'
+
+- script: |
+    python -m pip install --upgrade pip
+    python -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    ${{ if eq(parameters.enableCoverage, true) }}:
+      pip install pytest-cov
+  displayName: 'Install Python dependencies'
+
+- script: |
+    source venv/bin/activate
+    ${{ if ne(parameters.testFilter, '') }}:
+      ${{ if eq(parameters.enableCoverage, true) }}:
+        pytest --tb=short --verbose --junitxml=pytest-results.xml --cov=. --cov-report=xml -k "${{ parameters.testFilter }}"
+      ${{ else }}:
+        pytest --tb=short --verbose --junitxml=pytest-results.xml -k "${{ parameters.testFilter }}"
+    ${{ else }}:
+      ${{ if eq(parameters.enableCoverage, true) }}:
+        pytest --tb=short --verbose --junitxml=pytest-results.xml --cov=. --cov-report=xml
+      ${{ else }}:
+        pytest --tb=short --verbose --junitxml=pytest-results.xml
+  displayName: 'Run Python tests'
+  env:
+    AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+    AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
+    AZURE_OPENAI_DEPLOYMENT_NAME: $(AZURE_OPENAI_DEPLOYMENT_NAME)
+    APPLICATIONINSIGHTS_CONNECTION_STRING: $(APPLICATIONINSIGHTS_CONNECTION_STRING)
+
+- task: PublishTestResults@2
+  displayName: 'Publish test results'
+  condition: always()
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: 'pytest-results.xml'
+    failTaskOnFailedTests: true
+    testRunTitle: 'Python ${{ parameters.pythonVersion }} Tests'
+
+- ${{ if eq(parameters.enableCoverage, true) }}:
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish coverage results'
+    condition: always()
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: 'coverage.xml'
+      failIfCoverageEmpty: false

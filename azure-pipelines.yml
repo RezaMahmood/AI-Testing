@@ -1,0 +1,55 @@
+# Azure DevOps Pipeline using Template-based Architecture
+# Main pipeline file that leverages reusable templates
+
+trigger:
+- main
+- develop
+
+pr:
+- main
+- develop
+
+parameters:
+- name: testFilter
+  displayName: 'Test filter pattern (optional)'
+  type: string
+  default: ''
+- name: runMultiVersion
+  displayName: 'Test multiple Python versions'
+  type: boolean
+  default: false
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Test
+  displayName: 'Python Testing'
+  jobs:
+  - job: SingleVersion
+    displayName: 'Python 3.11 Tests'
+    condition: eq('${{ parameters.runMultiVersion }}', false)
+    steps:
+    - template: .azuredevops/templates/python-test-template.yml
+      parameters:
+        pythonVersion: '3.11'
+        testFilter: '${{ parameters.testFilter }}'
+        enableCoverage: true
+  
+  - ${{ if eq(parameters.runMultiVersion, true) }}:
+    - job: MultiVersion
+      displayName: 'Multi-Version Tests'
+      strategy:
+        matrix:
+          Python310:
+            pythonVersion: '3.10'
+          Python311:
+            pythonVersion: '3.11'
+          Python312:
+            pythonVersion: '3.12'
+      steps:
+      - template: .azuredevops/templates/python-test-template.yml
+        parameters:
+          pythonVersion: '$(pythonVersion)'
+          testFilter: '${{ parameters.testFilter }}'
+          enableCoverage: false
