@@ -24,8 +24,12 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
                                             ConsoleSpanExporter)
 from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.trace import set_tracer_provider
-from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from semantic_kernel.connectors.ai.open_ai import (
+    AzureChatCompletion, OpenAIPromptExecutionSettings)
+from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.azure_chat_prompt_execution_settings import \
+    AzureChatPromptExecutionSettings
 from semantic_kernel.connectors.mcp import MCPStdioPlugin
+from semantic_kernel.functions import KernelArguments
 
 from assertion_result import AssertionResult
 
@@ -192,10 +196,85 @@ class MCPAgentAssert:
         if self.chrome_plugin:
             self.kernel.add_plugin(self.chrome_plugin)
             print("✅ Chrome DevTools plugin added to kernel")
+
+            # NEW: Verify plugin functions are available
+            await self._verify_plugin_functions()
         else:
             print("⚠️ Warning: No Chrome DevTools plugin available")
 
         print("✅ Semantic Kernel setup complete")
+
+    async def _verify_plugin_functions(self):
+        """Verify that MCP plugin functions are actually available"""
+        print("🔍 Verifying MCP plugin functions...")
+
+        try:
+            # Check available plugins
+            available_plugins = self.kernel.plugins
+            print(f"📋 Total plugins loaded: {len(available_plugins)}")
+
+            chrome_plugin = None
+            for plugin_name, plugin in available_plugins.items():
+                print(f"🔌 Plugin: {plugin_name}")
+                if "chrome" in plugin_name.lower() or "devtools" in plugin_name.lower():
+                    chrome_plugin = plugin
+
+                # List all functions in this plugin
+                if hasattr(plugin, 'functions') and plugin.functions:
+                    print(
+                        f"  📚 Functions available ({len(plugin.functions)}):")
+                    for func_name in plugin.functions.keys():
+                        print(f"    - {func_name}")
+                else:
+                    print(f"  ⚠️ No functions found in plugin")
+
+            if chrome_plugin and hasattr(chrome_plugin, 'functions') and chrome_plugin.functions:
+                print(
+                    f"✅ Chrome DevTools plugin verified with {len(chrome_plugin.functions)} functions")
+                return True
+            else:
+                print("❌ Chrome DevTools plugin has no available functions")
+                return False
+
+        except Exception as e:
+            print(f"❌ Error verifying plugin functions: {e}")
+            return False
+
+    async def _test_mcp_connection(self):
+        """Test that MCP connection is working by attempting a simple function call"""
+        print("🧪 Testing MCP connection...")
+
+        try:
+            # Try to get available plugins and their functions
+            available_plugins = self.kernel.plugins
+
+            # Look for any Chrome DevTools functions to test
+            for plugin_name, plugin in available_plugins.items():
+                if hasattr(plugin, 'functions') and plugin.functions:
+                    # Try to find a simple function to test (like getting version or status)
+                    test_functions = ['version', 'status', 'ping', 'info']
+
+                    for func_name in plugin.functions.keys():
+                        if any(test in func_name.lower() for test in test_functions):
+                            print(
+                                f"🔄 Testing function: {plugin_name}.{func_name}")
+                            try:
+                                # Attempt to call the function
+                                result = await self.kernel.invoke_function(plugin_name, func_name)
+                                print(
+                                    f"✅ MCP connection test successful: {func_name}")
+                                return True
+                            except Exception as func_error:
+                                print(
+                                    f"⚠️ Function {func_name} test failed: {func_error}")
+                                continue
+
+            print("⚠️ No testable functions found, but plugin is loaded")
+            return True
+
+        except Exception as e:
+            print(f"❌ MCP connection test failed: {e}")
+            raise RuntimeError(f"MCP connection not working: {e}")
 
     async def assert_case(self, url: str, testmessage: str, expectedresult: str) -> AssertionResult:
         """Execute test case using Chrome DevTools and AI reasoning"""
@@ -209,16 +288,40 @@ class MCPAgentAssert:
                 raise RuntimeError(
                     "Chrome DevTools plugin not available. Use 'async with MCPAgentAssert() as agent:' pattern.")
 
+            # NEW: Test MCP connection before proceeding
+            await self._test_mcp_connection()
+
             # Load prompt template and substitute variables
             prompt_template = load_prompt_template('web_testing_assistant')
+
+            # Explicitly convert all parameters to strings and validate
+            safe_url = str(url) if url is not None else ""
+            safe_testmessage = str(
+                testmessage) if testmessage is not None else ""
+            safe_expectedresult = str(
+                expectedresult) if expectedresult is not None else ""
+
             prompt = prompt_template.substitute(
-                url=url,
-                testmessage=testmessage,
-                expectedresult=expectedresult
+                url=safe_url,
+                testmessage=safe_testmessage,
+                expectedresult=safe_expectedresult
             )
 
             # Execute the prompt using the persistent kernel with MCP plugin
-            result = await self.kernel.invoke_prompt(prompt)
+            exec_settings = AzureChatPromptExecutionSettings(
+                temperature=0.0,
+                top_p=0.0,
+                max_tokens=1000,
+                frequency_penalty=0.0,
+                presence_penalty=0.0,
+                seed=12345,
+                service_id="azure-openai"
+            )
+            arguments = KernelArguments(settings=exec_settings)
+
+            result = await self.kernel.invoke_prompt(
+                prompt, arguments=arguments)
+            # result = await self.kernel.invoke_prompt(prompt)
             result_text = str(result)
 
             # Analyze the result to determine if test passed or failed
@@ -230,6 +333,24 @@ class MCPAgentAssert:
             )
 
         except Exception as ex:
+            print(
+                f"🚨 Exception in assert_case: {type(ex).__name__}: {str(ex)}")
+
+            # Additional debugging for function-related errors
+            if "invoking function" in str(ex):
+                print(
+                    "🔍 Function invocation error detected. Checking available functions...")
+                try:
+                    available_plugins = self.kernel.plugins
+                    for plugin_name, plugin in available_plugins.items():
+                        print(f"Debug Plugin: {plugin_name}")
+                        if hasattr(plugin, 'functions') and plugin.functions:
+                            for func_name, func in plugin.functions.items():
+                                print(
+                                    f"  Debug Function: {func_name} -> {func}")
+                except Exception as debug_ex:
+                    print(f"  Debug error: {debug_ex}")
+
             return AssertionResult(
                 TestPassed=False,
                 Message=f"Error in assert_case: {str(ex)}"
