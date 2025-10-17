@@ -6,9 +6,6 @@ parameters:
 - name: pythonVersion
   type: string
   default: '3.11'
-- name: testFilter
-  type: string
-  default: ''
 - name: enableCoverage
   type: boolean
   default: true
@@ -48,16 +45,10 @@ steps:
 
 - script: |
     source venv/bin/activate
-    ${{ if ne(parameters.testFilter, '') }}:
-      ${{ if eq(parameters.enableCoverage, true) }}:
-        pytest --tb=short --verbose --junitxml=pytest-results.xml --cov=. --cov-report=xml -k "${{ parameters.testFilter }}"
-      ${{ else }}:
-        pytest --tb=short --verbose --junitxml=pytest-results.xml -k "${{ parameters.testFilter }}"
+    ${{ if eq(parameters.enableCoverage, true) }}:
+      pytest --tb=short --verbose --junitxml=pytest-results.xml --cov=. --cov-report=xml
     ${{ else }}:
-      ${{ if eq(parameters.enableCoverage, true) }}:
-        pytest --tb=short --verbose --junitxml=pytest-results.xml --cov=. --cov-report=xml
-      ${{ else }}:
-        pytest --tb=short --verbose --junitxml=pytest-results.xml
+      pytest --tb=short --verbose --junitxml=pytest-results.xml
   displayName: 'Run Python tests'
   env:
     AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
