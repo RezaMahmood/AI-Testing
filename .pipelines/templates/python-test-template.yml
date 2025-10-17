@@ -39,22 +39,35 @@ steps:
     python -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
-    ${{ if eq(parameters.enableCoverage, true) }}:
-      pip install pytest-cov
   displayName: 'Install Python dependencies'
 
-- script: |
-    source venv/bin/activate
-    ${{ if eq(parameters.enableCoverage, true) }}:
+- ${{ if eq(parameters.enableCoverage, true) }}:
+  - script: |
+      source venv/bin/activate
+      pip install pytest-cov
+    displayName: 'Install coverage dependencies'
+
+- ${{ if eq(parameters.enableCoverage, true) }}:
+  - script: |
+      source venv/bin/activate
       pytest --tb=short --verbose --junitxml=pytest-results.xml --cov=. --cov-report=xml
-    ${{ else }}:
+    displayName: 'Run Python tests with coverage'
+    env:
+      AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+      AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
+      AZURE_OPENAI_DEPLOYMENT_NAME: $(AZURE_OPENAI_DEPLOYMENT_NAME)
+      APPLICATIONINSIGHTS_CONNECTION_STRING: $(APPLICATIONINSIGHTS_CONNECTION_STRING)
+
+- ${{ if ne(parameters.enableCoverage, true) }}:
+  - script: |
+      source venv/bin/activate
       pytest --tb=short --verbose --junitxml=pytest-results.xml
-  displayName: 'Run Python tests'
-  env:
-    AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
-    AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
-    AZURE_OPENAI_DEPLOYMENT_NAME: $(AZURE_OPENAI_DEPLOYMENT_NAME)
-    APPLICATIONINSIGHTS_CONNECTION_STRING: $(APPLICATIONINSIGHTS_CONNECTION_STRING)
+    displayName: 'Run Python tests'
+    env:
+      AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+      AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
+      AZURE_OPENAI_DEPLOYMENT_NAME: $(AZURE_OPENAI_DEPLOYMENT_NAME)
+      APPLICATIONINSIGHTS_CONNECTION_STRING: $(APPLICATIONINSIGHTS_CONNECTION_STRING)
 
 - task: PublishTestResults@2
   displayName: 'Publish test results'
