@@ -1,5 +1,6 @@
-# Template for Python test execution
-# File: .azuredevops/templates/python-test-template.yml
+# Python Test Execution Template
+# Location: .pipelines/templates/python-test-template.yml
+# Reusable template for Python testing across multiple pipelines
 
 parameters:
 - name: pythonVersion

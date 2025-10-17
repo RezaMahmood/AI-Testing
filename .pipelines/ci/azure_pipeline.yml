@@ -20,6 +20,9 @@ parameters:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+- group: 'AI Testing'
+
 stages:
 - stage: Test
   displayName: 'Python Testing'
@@ -28,7 +31,7 @@ stages:
     displayName: 'Python 3.11 Tests'
     condition: eq('${{ parameters.runMultiVersion }}', false)
     steps:
-    - template: .azuredevops/templates/python-test-template.yml
+    - template: ../templates/python-test-template.yml
       parameters:
         pythonVersion: '3.11'
         testFilter: '${{ parameters.testFilter }}'
@@ -46,7 +49,7 @@ stages:
           Python312:
             pythonVersion: '3.12'
       steps:
-      - template: .azuredevops/templates/python-test-template.yml
+      - template: ../templates/python-test-template.yml
         parameters:
           pythonVersion: '$(pythonVersion)'
           testFilter: '${{ parameters.testFilter }}'
