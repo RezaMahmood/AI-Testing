@@ -1,31 +1,33 @@
 
-import semantic_kernel as sk
-from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
-from semantic_kernel.connectors.mcp import MCPStdioPlugin
-import os
-from dotenv import load_dotenv
-from assertion_result import AssertionResult
-
 import logging
+import os
+from pathlib import Path
+from string import Template
 
-from azure.monitor.opentelemetry.exporter import (
-    AzureMonitorLogExporter,
-    AzureMonitorMetricExporter,
-    AzureMonitorTraceExporter,
-)
-
+import semantic_kernel as sk
+from azure.monitor.opentelemetry.exporter import (AzureMonitorLogExporter,
+                                                  AzureMonitorMetricExporter,
+                                                  AzureMonitorTraceExporter)
+from dotenv import load_dotenv
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
+from opentelemetry.sdk._logs.export import (BatchLogRecordProcessor,
+                                            ConsoleLogExporter)
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
+from opentelemetry.sdk.metrics.export import (ConsoleMetricExporter,
+                                              PeriodicExportingMetricReader)
 from opentelemetry.sdk.metrics.view import DropAggregation, View
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
+                                            ConsoleSpanExporter)
 from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.trace import set_tracer_provider
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from semantic_kernel.connectors.mcp import MCPStdioPlugin
+
+from assertion_result import AssertionResult
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,10 +35,12 @@ load_dotenv()
 # Replace the connection string with your Application Insights connection string
 connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if not connection_string:
-    raise ValueError("APPLICATIONINSIGHTS_CONNECTION_STRING environment variable required")
+    raise ValueError(
+        "APPLICATIONINSIGHTS_CONNECTION_STRING environment variable required")
 
 # Create a resource to represent the service/sample
-resource = Resource.create({ResourceAttributes.SERVICE_NAME: "telemetry-application-insights-quickstart"})
+resource = Resource.create(
+    {ResourceAttributes.SERVICE_NAME: "telemetry-application-insights-quickstart"})
 
 
 def set_up_logging():
@@ -78,7 +82,8 @@ def set_up_metrics():
 
     # Initialize a metric provider for the application. This is a factory for creating meters.
     meter_provider = MeterProvider(
-        metric_readers=[PeriodicExportingMetricReader(exporter, export_interval_millis=5000)],
+        metric_readers=[PeriodicExportingMetricReader(
+            exporter, export_interval_millis=5000)],
         resource=resource,
         views=[
             # Dropping all instrument names except for those starting with "semantic_kernel"
@@ -95,42 +100,52 @@ set_up_logging()
 set_up_tracing()
 set_up_metrics()
 
+
+def load_prompt_template(template_name: str) -> Template:
+    """Load a prompt template from file"""
+    template_path = Path("prompts") / f"{template_name}.txt"
+    with open(template_path, 'r', encoding='utf-8') as f:
+        return Template(f.read())
+
+
 class MCPAgentAssert:
     def __init__(self):
         # Azure OpenAI configuration from environment
         self.api_key = os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
-        
+
         # Validation
         if not self.api_key:
-            raise ValueError("AZURE_OPENAI_API_KEY environment variable required")
+            raise ValueError(
+                "AZURE_OPENAI_API_KEY environment variable required")
         if not self.azure_endpoint:
-            raise ValueError("AZURE_OPENAI_ENDPOINT environment variable required")
+            raise ValueError(
+                "AZURE_OPENAI_ENDPOINT environment variable required")
         if not self.deployment_name:
-            raise ValueError("AZURE_OPENAI_DEPLOYMENT_NAME environment variable required")
-            
+            raise ValueError(
+                "AZURE_OPENAI_DEPLOYMENT_NAME environment variable required")
+
         self.kernel = None
         self.chrome_plugin = None
-        
-        
-    
+
     async def __aenter__(self):
         """Async context manager entry - establish MCP connection"""
         print("🔧 Establishing MCP connection...")
-        
+
         # Create and enter the MCP plugin context
         self.chrome_plugin = MCPStdioPlugin(
             name="chrome_devtools",
             description="Plugin to interact with Chrome DevTools via MCP",
             command="npx",
-            args=["chrome-devtools-mcp@latest", "--isolated", "true", "--headless", "true", "-y"]
+            args=["chrome-devtools-mcp@latest", "--isolated",
+                  "true", "--headless", "true", "-y"]
         )
-        
+
         try:
             await self.chrome_plugin.__aenter__()
             print("✅ MCP connection established")
-            
+
             # Setup kernel with the active plugin
             await self._setup_kernel()
             return self
@@ -143,7 +158,7 @@ class MCPAgentAssert:
                 except:
                     pass
             raise
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit - cleanup MCP connection"""
         print("🧹 Cleaning up MCP connection...")
@@ -156,14 +171,14 @@ class MCPAgentAssert:
             finally:
                 self.chrome_plugin = None
         self.kernel = None
-    
+
     async def _setup_kernel(self):
         """Setup kernel with already-established MCP plugin"""
         print("🔧 Setting up Semantic Kernel with Azure OpenAI...")
-        
+
         # Create kernel
         self.kernel = sk.Kernel()
-        
+
         # Add Azure OpenAI service
         self.kernel.add_service(AzureChatCompletion(
             service_id="azure-openai",
@@ -172,64 +187,48 @@ class MCPAgentAssert:
             deployment_name=self.deployment_name,
             api_version="2024-02-01"
         ))
-        
+
         # Add the already-established MCP plugin
         if self.chrome_plugin:
             self.kernel.add_plugin(self.chrome_plugin)
             print("✅ Chrome DevTools plugin added to kernel")
         else:
             print("⚠️ Warning: No Chrome DevTools plugin available")
-        
+
         print("✅ Semantic Kernel setup complete")
-    
-    
-    
+
     async def assert_case(self, url: str, testmessage: str, expectedresult: str) -> AssertionResult:
         """Execute test case using Chrome DevTools and AI reasoning"""
         try:
             # Verify kernel is setup (should be done in __aenter__)
             if not self.kernel:
-                raise RuntimeError("Kernel not initialized. Use 'async with MCPAgentAssert() as agent:' pattern.")
-            
+                raise RuntimeError(
+                    "Kernel not initialized. Use 'async with MCPAgentAssert() as agent:' pattern.")
+
             if not self.chrome_plugin:
-                raise RuntimeError("Chrome DevTools plugin not available. Use 'async with MCPAgentAssert() as agent:' pattern.")
-            
-            prompt = f"""
-You are a web testing assistant with browser automation capabilities. Please analyze and test the following web scenario:
+                raise RuntimeError(
+                    "Chrome DevTools plugin not available. Use 'async with MCPAgentAssert() as agent:' pattern.")
 
-URL: {url}
-Test Instructions: {testmessage}
-Expected Result: {expectedresult}
+            # Load prompt template and substitute variables
+            prompt_template = load_prompt_template('web_testing_assistant')
+            prompt = prompt_template.substitute(
+                url=url,
+                testmessage=testmessage,
+                expectedresult=expectedresult
+            )
 
-Please complete the following steps:
-1. Access the specified URL and execute the test instructions
-2. Analyze the actual results against the expected results
-3. If the test does not meet expectations, provide:
-   - Clear explanation of what was observed versus what was expected
-   - Specific reasons for any discrepancies
-   - Actionable recommendations (limit to top 3 suggestions)
-
-Please format your response as:
-ACTUAL RESULT: [What you observed during testing]
-REASON FOR FAILURE: [If applicable, specific reasons why expectations were not met]
-SUGGESTIONS: [If applicable, top 3 recommendations for improvement]
-CONCLUSION: TEST PASSED or TEST FAILED
-
-IMPORTANT: Always end your response with either "TEST PASSED" or "TEST FAILED" to indicate the test outcome.
-"""
-            
             # Execute the prompt using the persistent kernel with MCP plugin
             result = await self.kernel.invoke_prompt(prompt)
             result_text = str(result)
-            
+
             # Analyze the result to determine if test passed or failed
             test_passed = "TEST PASSED" in result_text.upper()
-            
+
             return AssertionResult(
                 TestPassed=test_passed,
                 Message=result_text
             )
-            
+
         except Exception as ex:
             return AssertionResult(
                 TestPassed=False,
