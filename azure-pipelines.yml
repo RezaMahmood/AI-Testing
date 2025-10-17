@@ -2,12 +2,10 @@
 # Main pipeline file that leverages reusable templates
 
 trigger:
-- main
-- develop
+- none
 
 pr:
-- main
-- develop
+- none
 
 parameters:
 - name: testFilter
